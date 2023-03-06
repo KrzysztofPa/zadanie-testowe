@@ -15,7 +15,7 @@ const testDataSet: TestDataSet[] = [
     expected: true,
   },
   {
-    date: "32/02/2023",
+    date: "32/06/2023", //day > 31
     expected: false,
   },
   {

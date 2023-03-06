@@ -1,1 +1,0 @@
-export const isStringNotEmpty = (string:string):boolean => (0 !== string.length)

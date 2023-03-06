@@ -1,24 +1,77 @@
+import axios from "axios";
 import React, { useState } from "react";
 import { isDateValid } from "../partials/isDateValid";
 import { isEmailValid } from "../partials/isEmailValid";
-import { isStringNotEmpty } from "../partials/isStringNotEmpty";
+import { isStringEmpty } from "../partials/isStringEmpty";
+import { useGetDepartmentsList } from "../partials/useGetDepartmentsList";
 
 export const Form = () => {
-  const [userName, setUserName] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [email, setEmail] = useState("");
-  const [isTermsOfUseAccepted, setIsTermsOfUseAccepted] = useState(false);
+  const departmentList = useGetDepartmentsList();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: "",
+    birthDate: "",
+    email: "",
+    department: "",
+    termsOfUseAccepted: false,
+  });
+
+  const [formStatus, setFormStatus] = useState({
+    fullNameCorrect: true,
+    birthDateCorrect: true,
+    emailCorrect: true,
+    departmentSelected: true,
+    wasFormSentCorrectly: false,
+    errorOccured: false,
+  });
+
+  const handleTermsOfUseChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    setFormData({ ...formData, termsOfUseAccepted: event.target.checked });
+  };
+
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    setFormData({ ...formData, [event.target.name]: event.target.value });
+  };
 
   const handleSubmit = () => {
-    console.log("---");
-    console.log(userName);
-    console.log(isStringNotEmpty(userName));
-    console.log(birthDate);
-    console.log(isDateValid(birthDate));
-    console.log(email);
-    console.log(isEmailValid(birthDate));
-    console.log(isTermsOfUseAccepted);
-    // TODO: Wyślij dane
+    setFormStatus({
+      fullNameCorrect: !isStringEmpty(formData.fullName),
+      birthDateCorrect: isDateValid(formData.birthDate),
+      emailCorrect: isEmailValid(formData.email),
+      departmentSelected: "" !== formData.department,
+      wasFormSentCorrectly: false,
+      errorOccured: false,
+    });
+
+    if (
+      !isStringEmpty(formData.fullName) &&
+      isDateValid(formData.birthDate) &&
+      isEmailValid(formData.email) &&
+      "" !== formData.department
+    ) {
+      setIsLoading(true);
+      const postURL =
+        "https://ddh-front-default-rtdb.europe-west1.firebasedatabase.app/users.json";
+      axios
+        .post(postURL, formData)
+        .then(() => {
+          setFormStatus({
+            ...formStatus,
+            wasFormSentCorrectly: true,
+          });
+        })
+        .catch(() => {
+          setFormStatus({
+            ...formStatus,
+            errorOccured: true,
+          });
+        })
+        .finally(() => setIsLoading(false));
+    }
   };
 
   return (
@@ -33,8 +86,12 @@ export const Form = () => {
           id="user-name"
           placeholder="Imię i nazwisko"
           name="fullName"
-          onChange={(e) => setUserName(e.target.value)}
+          value={formData.fullName}
+          onChange={handleChange}
         />
+        {!formStatus.fullNameCorrect && (
+          <p className="text-danger">Wartość nie może być pusta</p>
+        )}
       </div>
       <div className="mb-3">
         <label htmlFor="user-birth-date" className="form-label">
@@ -46,8 +103,14 @@ export const Form = () => {
           id="user-birth-date"
           placeholder="DD/MM/YYYY"
           name="birthDate"
-          onChange={(e) => setBirthDate(e.target.value)}
+          value={formData.birthDate}
+          onChange={handleChange}
         />
+        {!formStatus.birthDateCorrect && (
+          <p className="text-danger">
+            Wprowadź date urodzenia w formacie DD/MM/YYYY
+          </p>
+        )}
       </div>
       <div className="mb-3">
         <label htmlFor="user-email" className="form-label">
@@ -59,44 +122,71 @@ export const Form = () => {
           id="user-email"
           placeholder="user@example.com"
           name="email"
-          onChange={(e) => setEmail(e.target.value)}
+          value={formData.email}
+          onChange={handleChange}
         />
+        {!formStatus.emailCorrect && (
+          <p className="text-danger">Wprowadź prawidłowy adres E-mail</p>
+        )}
       </div>
-      {/* <div className="mb-3">
+      <div className="mb-3">
         <label htmlFor="user-department" className="form-label">
           Wydział
         </label>
-        <select className="form-select" name="department" id="user-department">
+        <select
+          className="form-select"
+          name="department"
+          id="user-department"
+          onChange={handleChange}
+        >
           <option disabled selected hidden>
             Wybierz oddział
           </option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
+          {departmentList.map((department) => (
+            <option key={department.id} value={department.id}>
+              {department.name}
+            </option>
+          ))}
         </select>
-      </div> */}
+        {!formStatus.departmentSelected && (
+          <p className="text-danger">Wybierz oddział z listy</p>
+        )}
+      </div>
       <div className="form-check">
         <input
           className="form-check-input"
           type="checkbox"
-          value=""
           id="form-terms"
           name="termsOfUse"
-          onChange={() => setIsTermsOfUseAccepted(!isTermsOfUseAccepted)}
+          onChange={handleTermsOfUseChange}
         />
         <label className="form-check-label" htmlFor="form-terms">
           Akceptuję regulamin
         </label>
       </div>
+
       <div className="d-grid gap-2 d-md-flex justify-content-md-end">
         <button
+          disabled={!formData.termsOfUseAccepted || isLoading}
           type="button"
           className="btn btn-primary"
           onClick={handleSubmit}
         >
-          Zapisz
+          {isLoading ? (
+            <span
+              className="spinner-border spinner-border-sm"
+              role="status"
+              aria-hidden="true"
+            />
+          ) : (
+            <> Zapisz</>
+          )}
         </button>
       </div>
+      {formStatus.wasFormSentCorrectly && (
+        <p className="text-success">Dane zostały poprawnie zapisane</p>
+      )}
+      {formStatus.errorOccured && <p className="text-danger">Wystąpił błąd</p>}
     </form>
   );
 };
