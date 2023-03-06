@@ -21,3 +21,9 @@
 ## Resources
 
 - Wykorzystaj [Bootstrap](https://getbootstrap.com/docs/) do stylowania elementów
+
+
+## Jak uruchomić
+
+- npm start - uruchoamia aplikacje
+- npm tests - uruchamia testy
